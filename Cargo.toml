@@ -1,11 +1,12 @@
 [package]
 name = "pulsesink"
 version = "0.1.0"
-authors = ["hodasemi <michaelh.95@t-online.de>"]
-
-[dependencies]
+authors = ["Michael Hübner <michaelh.95@t-online.de>"]
 
 [dependencies.gtk]
 version = "0.5"
 features = ["v3_22"]
 
+[profile.release]
+opt-level = 3
+lto = true

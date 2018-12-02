@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=PulseSink
+Icon=preferences-system
+Exec=pulsesink/pulsesink
+Terminal=false
+Type=Application
+StartupNotify=true
+Categories=GNOME;GTK;System;Audio;
+Keywords=PulseAudio;Sink;
