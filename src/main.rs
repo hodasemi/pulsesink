@@ -65,23 +65,20 @@ fn main() {
 
     window.show_all();
 
+    // close event
+    window.connect_delete_event(|_, _| {
+        gtk::main_quit();
+        Inhibit(false)
+    });
+
     // open dialog window
     let name_chooser: Dialog = builder.get_object("NameChooser").unwrap();
     let new_sink: Button = builder.get_object("NewSink").unwrap();
-    let drop_down: ComboBox = builder.get_object("CombinedDropDown").unwrap();
 
     {
         let name_chooser_clone = name_chooser.clone();
 
         new_sink.connect_clicked(move |_| {
-            let data = ListStore::new(&[Type::String]);
-
-            if let Err(err) = fill_list_store(&data) {
-                println!("{}", err);
-            }
-
-            drop_down.set_model(Some(&data));
-
             name_chooser_clone.run();
         });
     }
@@ -100,7 +97,9 @@ fn main() {
     // create new sink
     let create_sink: Button = builder.get_object("CreateSink").unwrap();
     let sink_name_field: gtk::Entry = builder.get_object("SinkName").unwrap();
-    let combined_box: CheckButton = builder.get_object("CombinedCheckBox").unwrap();
+    let null_sink: RadioButton = builder.get_object("NullRadio").unwrap();
+    let combined_sink: RadioButton = builder.get_object("SimultaneousRadio").unwrap();
+    let loopback_sink: RadioButton = builder.get_object("LoopBackRadio").unwrap();
 
     {
         let name_chooser_clone = name_chooser.clone();
@@ -113,11 +112,22 @@ fn main() {
                 return;
             }
 
+            let sink_type = if null_sink.get_active() {
+                "module-null-sink"
+            } else if combined_sink.get_active() {
+                "module-combine-sink"
+            } else if loopback_sink.get_active() {
+                "module-loopback"
+            } else {
+                println!("radio button error");
+                return;
+            };
+
             if let Err(err) = command::bash(
                 "pacmd",
                 &[
                     "load-module",
-                    "module-null-sink",
+                    sink_type,
                     &format!("sink_name={}", &sink_name),
                 ],
             ) {

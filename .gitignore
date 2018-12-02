@@ -3,3 +3,4 @@
 
 *.glade~
 Cargo.lock
+.vscode/
