@@ -1,5 +1,3 @@
-use constants::*;
-
 pub struct Entry {
     id: String,
     name: String,

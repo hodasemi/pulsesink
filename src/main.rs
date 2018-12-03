@@ -4,8 +4,6 @@ extern crate libpulse_binding as pa;
 use gtk::prelude::*;
 use gtk::*;
 
-mod constants;
-
 mod gui;
 mod pulse;
 mod util;
