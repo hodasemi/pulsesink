@@ -1,12 +1,11 @@
-use command;
 use constants::*;
 
-#[derive(Clone)]
 pub struct Entry {
     id: String,
     name: String,
 }
 
+/*
 fn crop_letters(s: &mut String, pos: usize) {
     match s.char_indices().nth(pos) {
         Some((pos, _)) => {
@@ -41,12 +40,14 @@ fn filter(terms: &[&str], lines: &Vec<String>) -> Vec<String> {
 
     filtered_lines
 }
+*/
 
 /*
 fn extract_id(name: &str) -> String {}
 */
 
 impl Entry {
+    /*
     fn create_entries(infos: &Vec<String>) -> Vec<Entry> {
         let mut entries = Vec::new();
 
@@ -77,12 +78,10 @@ impl Entry {
 
         entries
     }
+    */
 
-    fn new() -> Entry {
-        Entry {
-            id: String::new(),
-            name: String::new(),
-        }
+    pub fn new(id: String, name: String) -> Entry {
+        Entry { id: id, name: name }
     }
 
     pub fn name(&self) -> &String {
@@ -104,6 +103,7 @@ impl Entry {
     }
 }
 
+/*
 pub fn get_all_sinks() -> Result<Vec<Entry>, String> {
     let lines = match command::bash("pacmd", &["list-sinks"]) {
         Ok(lines) => lines,
@@ -114,3 +114,4 @@ pub fn get_all_sinks() -> Result<Vec<Entry>, String> {
 
     Ok(Entry::create_entries(&filtered))
 }
+*/

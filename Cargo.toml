@@ -3,6 +3,9 @@ name = "pulsesink"
 version = "0.1.1"
 authors = ["Michael Hübner <michaelh.95@t-online.de>"]
 
+[dependencies]
+libpulse-binding = "2.4.0"
+
 [dependencies.gtk]
 version = "0.5"
 features = ["v3_22"]
