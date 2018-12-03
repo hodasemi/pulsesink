@@ -62,20 +62,16 @@ fn create_sink_list(tree_view: &TreeView) -> Result<(), String> {
     Ok(())
 }
 
-fn load_module(sink_type: &str, name: &str) -> Result<(), String> {
-    return_error!(command::bash(
-        "pacmd",
-        &["load-module", sink_type, &format!("sink_name={}", &name)],
-    ));
+fn load_module(sink_type: &str, name: &str, args: &[&str]) -> Result<(), String> {
+    let sink_name_str = format!("sink_name={}", &name);
+    let mut create_sink_args = vec!["load-module", sink_type, &sink_name_str];
+    create_sink_args.extend_from_slice(args);
 
-    return_error!(command::bash(
-        "pacmd",
-        &[
-            "update-sink-proplist",
-            &name,
-            &format!("device.description={}", &name),
-        ],
-    ));
+    return_error!(command::bash("pacmd", create_sink_args.as_slice()));
+
+    let dev_prop_str = format!("device.description={}", &name);
+    let change_name_args = ["update-sink-proplist", &name, &dev_prop_str];
+    return_error!(command::bash("pacmd", &change_name_args,));
 
     Ok(())
 }
@@ -88,6 +84,16 @@ fn main() {
 
     let builder = Builder::new_from_string(include_str!("../pulsesink.glade"));
 
+    let name_chooser: Dialog = builder.get_object("NameChooser").unwrap();
+    let new_sink: Button = builder.get_object("NewSink").unwrap();
+    let create_sink: Button = builder.get_object("CreateSink").unwrap();
+    let sink_name_field: gtk::Entry = builder.get_object("SinkName").unwrap();
+    let null_sink: RadioButton = builder.get_object("NullRadio").unwrap();
+    let combined_sink: RadioButton = builder.get_object("SimultaneousRadio").unwrap();
+    let loopback_sink: RadioButton = builder.get_object("LoopBackRadio").unwrap();
+    let cancel_sink: Button = builder.get_object("CancelSink").unwrap();
+    let first_slave: ComboBoxText = builder.get_object("FirstSlaveBox").unwrap();
+    let second_slave: ComboBoxText = builder.get_object("SecondSlaveBox").unwrap();
     let window: Window = builder.get_object("MainWindow").unwrap();
     let tree_view: TreeView = builder.get_object("SinkList").unwrap();
 
@@ -105,21 +111,64 @@ fn main() {
         Inhibit(false)
     });
 
-    // open dialog window
-    let name_chooser: Dialog = builder.get_object("NameChooser").unwrap();
-    let new_sink: Button = builder.get_object("NewSink").unwrap();
-
     {
         let name_chooser_clone = name_chooser.clone();
 
+        name_chooser.connect_delete_event(move |_, _| {
+            name_chooser_clone.hide();
+            Inhibit(false)
+        });
+    }
+
+    // open dialog window
+    {
+        let name_chooser_clone = name_chooser.clone();
+        let first_slave_clone = first_slave.clone();
+        let second_slave_clone = second_slave.clone();
+        let combined_sink_clone = combined_sink.clone();
+
         new_sink.connect_clicked(move |_| {
+            let entries = match entry::get_all_sinks() {
+                Ok(sinks) => sinks,
+                Err(err) => {
+                    println!("{}", err);
+                    Vec::new()
+                }
+            };
+
+            first_slave_clone.remove_all();
+            second_slave_clone.remove_all();
+
+            for entry in &entries {
+                first_slave_clone.append_text(entry.name());
+                second_slave_clone.append_text(entry.name());
+            }
+
+            if !entries.is_empty() {
+                first_slave_clone.set_active(0);
+                second_slave_clone.set_active(0);
+            }
+
+            first_slave_clone.set_sensitive(combined_sink_clone.get_active());
+            second_slave_clone.set_sensitive(combined_sink_clone.get_active());
+
             name_chooser_clone.run();
         });
     }
 
-    // cancel dialog
-    let cancel_sink: Button = builder.get_object("CancelSink").unwrap();
+    // toggle slaves
+    {
+        let first_slave_clone = first_slave.clone();
+        let second_slave_clone = second_slave.clone();
+        let combined_sink_clone = combined_sink.clone();
 
+        combined_sink.connect_clicked(move |_| {
+            first_slave_clone.set_sensitive(combined_sink_clone.get_active());
+            second_slave_clone.set_sensitive(combined_sink_clone.get_active());
+        });
+    }
+
+    // cancel dialog
     {
         let name_chooser_clone = name_chooser.clone();
 
@@ -129,14 +178,10 @@ fn main() {
     }
 
     // create new sink
-    let create_sink: Button = builder.get_object("CreateSink").unwrap();
-    let sink_name_field: gtk::Entry = builder.get_object("SinkName").unwrap();
-    let null_sink: RadioButton = builder.get_object("NullRadio").unwrap();
-    let combined_sink: RadioButton = builder.get_object("SimultaneousRadio").unwrap();
-    let loopback_sink: RadioButton = builder.get_object("LoopBackRadio").unwrap();
-
     {
         let name_chooser_clone = name_chooser.clone();
+        let first_slave_clone = first_slave.clone();
+        let second_slave_clone = second_slave.clone();
 
         create_sink.connect_clicked(move |_| {
             let sink_name: String = sink_name_field.get_buffer().get_text();
@@ -146,18 +191,63 @@ fn main() {
                 return;
             }
 
-            let sink_type = if null_sink.get_active() {
-                "module-null-sink"
+            if null_sink.get_active() {
+                print_error!(load_module("module-null-sink", &sink_name, &[]));
             } else if combined_sink.get_active() {
-                "module-combine-sink"
+                let first_slave_name = match first_slave_clone.get_active_text() {
+                    Some(name) => name,
+                    None => {
+                        println!("couldn't get name for the first slave");
+                        return;
+                    }
+                };
+
+                let second_slave_name = match second_slave_clone.get_active_text() {
+                    Some(name) => name,
+                    None => {
+                        println!("couldn't get name for the second slave");
+                        return;
+                    }
+                };
+
+                let entries = match entry::get_all_sinks() {
+                    Ok(sinks) => sinks,
+                    Err(err) => {
+                        println!("{}", err);
+                        return;
+                    }
+                };
+
+                let first_slave_id =
+                    match entry::Entry::find_id_by_name(&entries, &first_slave_name) {
+                        Some(id) => id,
+                        None => {
+                            println!("no id found for name: {}", &first_slave_name);
+                            return;
+                        }
+                    };
+
+                let second_slave_id =
+                    match entry::Entry::find_id_by_name(&entries, &second_slave_name) {
+                        Some(id) => id,
+                        None => {
+                            println!("no id found for name: {}", &second_slave_name);
+                            return;
+                        }
+                    };
+
+                print_error!(load_module(
+                    "module-combine-sink",
+                    &sink_name,
+                    &[&format!("slaves={},{}", first_slave_id, second_slave_id)]
+                ));
             } else if loopback_sink.get_active() {
-                "module-loopback"
+                print_error!(load_module("module-loopback", &sink_name, &[]));
             } else {
                 println!("radio button error");
                 return;
             };
 
-            print_error!(load_module(&sink_type, &sink_name));
             print_error!(create_sink_list(&tree_view));
 
             name_chooser_clone.hide();

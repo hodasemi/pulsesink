@@ -3,6 +3,7 @@ use constants::*;
 
 #[derive(Clone)]
 pub struct Entry {
+    id: String,
     name: String,
 }
 
@@ -17,10 +18,14 @@ fn crop_letters(s: &mut String, pos: usize) {
     }
 }
 
-fn remove_prefix(string: &String, prefix: &str) -> String {
+fn remove_prefix(string: &String, prefix: &str, delimiters: &[&str]) -> String {
     let mut tmp_line = string.clone();
     crop_letters(&mut tmp_line, prefix.len());
-    tmp_line.replace("\"", "")
+    for delimiter in delimiters {
+        tmp_line = tmp_line.replace(delimiter, "");
+    }
+
+    tmp_line.trim().to_string()
 }
 
 fn filter(terms: &[&str], lines: &Vec<String>) -> Vec<String> {
@@ -37,6 +42,10 @@ fn filter(terms: &[&str], lines: &Vec<String>) -> Vec<String> {
     filtered_lines
 }
 
+/*
+fn extract_id(name: &str) -> String {}
+*/
+
 impl Entry {
     fn create_entries(infos: &Vec<String>) -> Vec<Entry> {
         let mut entries = Vec::new();
@@ -46,16 +55,19 @@ impl Entry {
         for line in infos {
             if line.as_str().contains(NAME) {
                 current_entry = Some(Entry::new());
+                if let Some(ref mut entry) = current_entry {
+                    entry.id = remove_prefix(line, NAME, &["<", ">"]);
+                }
             } else if line.as_str().contains(PRODUCT_NAME) {
                 if let Some(ref mut entry) = current_entry {
-                    entry.name = remove_prefix(line, PRODUCT_NAME);
+                    entry.name = remove_prefix(line, PRODUCT_NAME, &["\""]);
                     entries.push(entry.clone());
                 }
 
                 current_entry = None;
             } else if line.as_str().contains(PRODUCT_DESCRIPTION) {
                 if let Some(ref mut entry) = current_entry {
-                    entry.name = remove_prefix(line, PRODUCT_DESCRIPTION);
+                    entry.name = remove_prefix(line, PRODUCT_DESCRIPTION, &["\""]);
                     entries.push(entry.clone());
                 }
 
@@ -68,12 +80,27 @@ impl Entry {
 
     fn new() -> Entry {
         Entry {
+            id: String::new(),
             name: String::new(),
         }
     }
 
     pub fn name(&self) -> &String {
         &self.name
+    }
+
+    pub fn id(&self) -> &String {
+        &self.id
+    }
+
+    pub fn find_id_by_name<'a>(entries: &'a Vec<Entry>, name: &str) -> Option<&'a String> {
+        for entry in entries {
+            if entry.name == name {
+                return Some(entry.id());
+            }
+        }
+
+        None
     }
 }
 
