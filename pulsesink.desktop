@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=PulseSink
 Icon=preferences-system
-Exec=pulsesink/pulsesink
+Exec=pulsesink
 Terminal=false
 Type=Application
 StartupNotify=true
