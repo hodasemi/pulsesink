@@ -7,6 +7,22 @@ mod command;
 mod constants;
 mod entry;
 
+macro_rules! return_error {
+    ($v:expr) => {
+        if let Err(err) = $v {
+            return Err(err);
+        }
+    };
+}
+
+macro_rules! print_error {
+    ($v:expr) => {
+        if let Err(err) = $v {
+            println!("{}", err);
+        }
+    };
+}
+
 fn convert_tree_model<T: IsA<TreeModel>>(tree_view: &TreeView) -> Option<T> {
     tree_view.get_model().unwrap().downcast().ok()
 }
@@ -42,6 +58,24 @@ fn create_sink_list(tree_view: &TreeView) -> Result<(), String> {
     if let Err(err) = fill_list_store(&sink_data) {
         return Err(err);
     }
+
+    Ok(())
+}
+
+fn load_module(sink_type: &str, name: &str) -> Result<(), String> {
+    return_error!(command::bash(
+        "pacmd",
+        &["load-module", sink_type, &format!("sink_name={}", &name)],
+    ));
+
+    return_error!(command::bash(
+        "pacmd",
+        &[
+            "update-sink-proplist",
+            &name,
+            &format!("device.description={}", &name),
+        ],
+    ));
 
     Ok(())
 }
@@ -123,31 +157,8 @@ fn main() {
                 return;
             };
 
-            if let Err(err) = command::bash(
-                "pacmd",
-                &[
-                    "load-module",
-                    sink_type,
-                    &format!("sink_name={}", &sink_name),
-                ],
-            ) {
-                println!("{}", err);
-            }
-
-            if let Err(err) = command::bash(
-                "pacmd",
-                &[
-                    "update-sink-proplist",
-                    &sink_name,
-                    &format!("device.description={}", &sink_name),
-                ],
-            ) {
-                println!("{}", err);
-            }
-
-            if let Err(err) = create_sink_list(&tree_view) {
-                println!("{}", err);
-            }
+            print_error!(load_module(&sink_type, &sink_name));
+            print_error!(create_sink_list(&tree_view));
 
             name_chooser_clone.hide();
         });
