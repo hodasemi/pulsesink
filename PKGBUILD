@@ -18,7 +18,6 @@ build() {
 
 package () {
 	cd "$pkgname-$pkgver"
-	install -Dm 755 target/release/pulsesink -t "$pkgdir/usr/bin/pulsesink"
+	install -Dm 755 target/release/pulsesink -t "$pkgdir/usr/bin/"
 	install -Dm 644 pulsesink.desktop -t "$pkgdir/usr/share/applications"
-	install -Dm 644 pulsesink.glade -t "$pkgdir/usr/bin/pulsesink"
 }
