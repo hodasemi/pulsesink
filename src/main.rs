@@ -86,7 +86,7 @@ fn main() {
         return;
     }
 
-    let builder = Builder::new_from_file("pulsesink.glade");
+    let builder = Builder::new_from_string(include_str!("../pulsesink.glade"));
 
     let window: Window = builder.get_object("MainWindow").unwrap();
     let tree_view: TreeView = builder.get_object("SinkList").unwrap();
